@@ -50,7 +50,7 @@ module QueryFactory = (InternalConfig: InternalConfig) => {
     };
     let component =
       ReasonReact.reducerComponentWithRetainedProps("ReasonApollo");
-    let make = (~variables, children) => {
+    let make = (~variables, ~render, _children) => {
       ...component,
       initialState: () => {
         response: Loading,
@@ -77,7 +77,7 @@ module QueryFactory = (InternalConfig: InternalConfig) => {
         sendQuery(~query=state.query, ~reduce);
         ReasonReact.NoUpdate;
       },
-      render: ({state}) => children(state.response)
+      render: ({state}) => render(state.response)
     };
   };
 };
