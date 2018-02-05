@@ -28,11 +28,11 @@ module QueryFactory = (InternalConfig: InternalConfig) => {
     type action =
       | Result(string)
       | Error(string);
-    let sendQuery = (~query, ~reduce) => {
+    let sendQuery = (~client, ~query, ~reduce) => {
       let _ =
         Js.Promise.(
           resolve(
-            InternalConfig.apolloClient##query({
+            client##query({
               "query": [@bs] gql(query##query),
               "variables": query##variables
             })
@@ -50,11 +50,24 @@ module QueryFactory = (InternalConfig: InternalConfig) => {
     };
     let component =
       ReasonReact.reducerComponentWithRetainedProps("ReasonApollo");
-    let make = (~variables, ~render, _children) => {
+    let make =
+        (~client=InternalConfig.apolloClient, ~variables, ~render, _children) => {
       ...component,
       initialState: () => {
-        response: Loading,
-        query: QueryConfig.makeWithVariables(variables)
+        let query = QueryConfig.makeWithVariables(variables);
+        let response =
+          switch (
+            client##readQuery({
+              "query": [@bs] gql(query##query),
+              "variables": query##variables
+            })
+          ) {
+          | response =>
+            let parse = query##parse;
+            Loaded(parse(response));
+          | exception (Js.Exn.Error(_e)) => Loading
+          };
+        {response, query};
       },
       retainedProps: variables,
       reducer: (action, state) =>
@@ -68,13 +81,17 @@ module QueryFactory = (InternalConfig: InternalConfig) => {
         },
       willReceiveProps: ({state, reduce, retainedProps}) =>
         if (variables !== retainedProps) {
-          sendQuery(~query=QueryConfig.makeWithVariables(variables), ~reduce);
+          sendQuery(
+            ~client,
+            ~query=QueryConfig.makeWithVariables(variables),
+            ~reduce
+          );
           state;
         } else {
           state;
         },
       didMount: ({state, reduce}) => {
-        sendQuery(~query=state.query, ~reduce);
+        sendQuery(~client, ~query=state.query, ~reduce);
         ReasonReact.NoUpdate;
       },
       render: ({state}) => render(state.response)

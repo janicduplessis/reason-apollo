@@ -1,10 +1,21 @@
 open ReasonApolloTypes;
 
-type queryObj = {. "query": ReasonApolloTypes.queryString, "variables": Js.Json.t };
-type mutationObj = {. "mutation": ReasonApolloTypes.queryString, "variables": Js.Json.t};
+type queryObj = {
+  .
+  "query": ReasonApolloTypes.queryString,
+  "variables": Js.Json.t
+};
 
-type generatedApolloClient = {. 
+type mutationObj = {
+  .
+  "mutation": ReasonApolloTypes.queryString,
+  "variables": Js.Json.t
+};
+
+type generatedApolloClient = {
+  .
   "query": [@bs.meth] (queryObj => string),
+  "readQuery": [@bs.meth] (queryObj => Js.Json.t),
   "mutate": [@bs.meth] (mutationObj => string)
 };
 
