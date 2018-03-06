@@ -21,9 +21,14 @@ module QueryFactory = (InternalConfig: InternalConfig) => {
       | Loading
       | Loaded(QueryConfig.t)
       | Failed(string);
+    type renderProp = {
+      data: response,
+      stale: bool
+    };
     type state = {
       response,
-      query: query(QueryConfig.t)
+      query: query(QueryConfig.t),
+      stale: bool
     };
     type action =
       | Result(string)
@@ -67,7 +72,7 @@ module QueryFactory = (InternalConfig: InternalConfig) => {
             Loaded(parse(response));
           | exception (Js.Exn.Error(_e)) => Loading
           };
-        {response, query};
+        {response, query, stale: false};
       },
       retainedProps: variables,
       reducer: (action, state) =>
@@ -75,9 +80,13 @@ module QueryFactory = (InternalConfig: InternalConfig) => {
         | Result(result) =>
           let parse = state.query##parse;
           let typedResult = parse(castResponse(result)##data);
-          ReasonReact.Update({...state, response: Loaded(typedResult)});
+          ReasonReact.Update({
+            ...state,
+            response: Loaded(typedResult),
+            stale: false
+          });
         | Error(error) =>
-          ReasonReact.Update({...state, response: Failed(error)})
+          ReasonReact.Update({...state, response: Failed(error), stale: false})
         },
       willReceiveProps: ({state, reduce, retainedProps}) =>
         if (variables !== retainedProps) {
@@ -86,7 +95,7 @@ module QueryFactory = (InternalConfig: InternalConfig) => {
             ~query=QueryConfig.makeWithVariables(variables),
             ~reduce
           );
-          state;
+          {...state, stale: true};
         } else {
           state;
         },
@@ -94,7 +103,7 @@ module QueryFactory = (InternalConfig: InternalConfig) => {
         sendQuery(~client, ~query=state.query, ~reduce);
         ReasonReact.NoUpdate;
       },
-      render: ({state}) => render(state.response)
+      render: ({state}) => render({data: state.response, stale: state.stale})
     };
   };
 };
